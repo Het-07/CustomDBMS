@@ -1,0 +1,17 @@
+[
+{ "timestamp": "2025-03-07T18:23:40.484599", "userId": "admin", "event": "LOGIN_SUCCESS", "ipAddress": "192.168.1.1" },
+{ "timestamp": "2025-03-07T18:24:35.463731", "userId": "admin", "event": "LOGIN_SUCCESS", "ipAddress": "192.168.1.1" },
+{ "timestamp": "2025-03-07T18:40:49.594328", "userId": "admin", "event": "LOGIN_SUCCESS", "ipAddress": "192.168.1.1" },
+{ "timestamp": "2025-03-07T18:42:18.214411", "userId": "admin", "event": "LOGIN_SUCCESS", "ipAddress": "192.168.1.1" },
+{ "timestamp": "2025-03-07T18:42:50.863977", "userId": "admin", "event": "LOGIN_SUCCESS", "ipAddress": "192.168.1.1" },
+{ "timestamp": "2025-03-07T23:22:25.520856", "userId": "admin", "event": "LOGIN_SUCCESS", "ipAddress": "192.168.1.1" },
+{ "timestamp": "2025-03-07T23:44:18.717785", "userId": "admin", "event": "LOGIN_SUCCESS", "ipAddress": "192.168.1.1" },
+{ "timestamp": "2025-03-07T23:44:50.476524", "userId": "admin", "event": "LOGIN_SUCCESS", "ipAddress": "192.168.1.1" },
+{ "timestamp": "2025-03-07T23:48:22.732482", "userId": "admin", "event": "LOGIN_SUCCESS", "ipAddress": "192.168.1.1" },
+{ "timestamp": "2025-03-07T23:49:03.175673", "userId": "admin", "event": "LOGIN_SUCCESS", "ipAddress": "192.168.1.1" },
+{ "timestamp": "2025-03-07T23:50:31.422842", "userId": "admin", "event": "LOGIN_SUCCESS", "ipAddress": "192.168.1.1" },
+{ "timestamp": "2025-03-07T23:51:05.165578", "userId": "admin", "event": "LOGIN_SUCCESS", "ipAddress": "192.168.1.1" },
+{ "timestamp": "2025-03-07T23:53:46.664787", "userId": "admin", "event": "LOGIN_SUCCESS", "ipAddress": "192.168.1.1" },
+{ "timestamp": "2025-04-28T00:53:15.565616", "userId": "hgpatel", "event": "LOGIN_SUCCESS", "ipAddress": "192.168.1.1" },
+{ "timestamp": "2025-04-28T01:07:41.294690", "userId": "hgpatel", "event": "LOGIN_SUCCESS", "ipAddress": "192.168.1.1" }
+]
