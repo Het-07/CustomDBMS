@@ -9,6 +9,7 @@ import java.util.*;
  */
 public class StorageManager {
     private static final String DATABASE_FILE = "data/database.json";
+    private static final String DATA_DIRECTORY = "data/";
     private static final String DELIMITER = " | ";
 
     /**
@@ -60,7 +61,6 @@ public class StorageManager {
         }
     }
 
-
     /**
      * Saves data into a JSON file with a custom delimiter system.
      * Supports storing multiple tables and their records.
@@ -69,13 +69,18 @@ public class StorageManager {
      * @param data The list of records to be stored.
      */
     public void saveTable(String tableName, List<String> data) {
-        Map<String, List<String>> database = loadDatabase();
-
         // Extract database name from tableName if it contains a dot
         String dbName = tableName.contains(".") ? tableName.split("\\.")[0] : "mydb";
         String tableNameOnly = tableName.contains(".") ? tableName.split("\\.")[1] : tableName;
 
-        // Add table to database if not already present
+        // Ensure data directory exists
+        File dataDir = new File(DATA_DIRECTORY);
+        if (!dataDir.exists()) {
+            dataDir.mkdirs();
+        }
+
+        // Update database structure
+        Map<String, List<String>> database = loadDatabase();
         if (!database.containsKey(dbName)) {
             database.put(dbName, new ArrayList<>());
         }
@@ -83,13 +88,11 @@ public class StorageManager {
         List<String> tables = database.get(dbName);
         if (!tables.contains(tableNameOnly)) {
             tables.add(tableNameOnly);
+            saveDatabase(database);
         }
 
-        // Update database structure
-        saveDatabase(database);
-
         // Now save the actual table data to a separate file
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter("data/" + tableName + ".json"))) {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(DATA_DIRECTORY + tableName + ".json"))) {
             writer.write("[\n");
             for (int i = 0; i < data.size(); i++) {
                 writer.write("  \"" + data.get(i).replace("\"", "\\\"") + "\"");
@@ -167,7 +170,7 @@ public class StorageManager {
      */
     public List<String> loadTableData(String tableName) {
         List<String> tableData = new ArrayList<>();
-        File file = new File("data/" + tableName + ".json");
+        File file = new File(DATA_DIRECTORY + tableName + ".json");
 
         if (!file.exists() || file.length() == 0) {
             return tableData;
@@ -185,12 +188,9 @@ public class StorageManager {
                 json = json.substring(1, json.length() - 1).trim();
 
                 if (!json.isEmpty()) {
-                    // Split by commas that are followed by a quote, but not inside quotes
-                    String[] rows = json.split("\",\\s*\"");
+                    String[] rows = json.split("\",\\s*\"|\",\"");
                     for (String row : rows) {
-                        // Remove surrounding quotes and unescape internal quotes
-                        row = row.replaceAll("^\"", "").replaceAll("\"$", "").replace("\\\"", "\"");
-                        tableData.add(row);
+                        tableData.add(row.replace("\"", "").trim());
                     }
                 }
             }
@@ -199,29 +199,5 @@ public class StorageManager {
         }
 
         return tableData;
-    }
-
-    /**
-     * Prints the raw content of a table file for debugging purposes.
-     *
-     * @param tableName The name of the table to debug.
-     */
-    public void debugTableFile(String tableName) {
-        File file = new File("data/" + tableName + ".json");
-
-        if (!file.exists()) {
-            System.out.println("Debug: Table file does not exist: " + file.getAbsolutePath());
-            return;
-        }
-
-        System.out.println("Debug: Raw content of " + file.getAbsolutePath() + ":");
-        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                System.out.println("DEBUG: " + line);
-            }
-        } catch (IOException e) {
-            System.err.println("Error reading file for debug: " + e.getMessage());
-        }
     }
 }

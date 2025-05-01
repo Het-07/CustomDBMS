@@ -1,9 +1,8 @@
 package transactionHandling;
 
-import storage.StorageManager;
 import concurrencyControl.LockManager;
 import java.util.*;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
+import storage.StorageManager;
 
 /**
  * Manages transactions with concurrency control using Read-Write locks.
@@ -14,7 +13,6 @@ public class TransactionManager {
     private boolean transactionActive = false;
     private final List<String> transactionLog = new LinkedList<>();
     private final StorageManager storageManager;
-    private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock(true);
     private final LockManager lockManager = new LockManager();
 
     /**
@@ -65,23 +63,26 @@ public class TransactionManager {
     /**
      * Commits the transaction by executing all stored operations dynamically.
      * Uses write lock to prevent concurrent modifications.
+     * 
+     * @param activeDatabase The currently active database
      */
-    public void commit() {
+    public void commit(String activeDatabase) {
         if (!transactionActive) {
             System.out.println("Error: No active transaction to commit.");
             return;
         }
 
-        lock.writeLock().lock(); // Acquire write lock to prevent concurrent writes
         try {
             for (String operation : transactionLog) {
-                executeOperation(operation);
+                executeOperation(operation, activeDatabase);
             }
             transactionLog.clear();
             transactionActive = false;
             System.out.println("Transaction committed successfully.");
-        } finally {
-            lock.writeLock().unlock(); // Release write lock after committing
+        } catch (Exception e) {
+            System.out.println("Error during commit: " + e.getMessage());
+            // Consider rolling back on error
+            // rollback();
         }
     }
 
@@ -104,8 +105,9 @@ public class TransactionManager {
      * Uses read lock for read operations, and write lock for insert/update/delete.
      *
      * @param operation The SQL-like operation.
+     * @param activeDatabase The currently active database
      */
-    private void executeOperation(String operation) {
+    private void executeOperation(String operation, String activeDatabase) {
         String[] tokens = operation.trim().split("\\s+");
 
         if (tokens.length < 3) {
@@ -115,14 +117,15 @@ public class TransactionManager {
 
         String command = tokens[0].toUpperCase();
         String tableName = tokens[2];
+        String fullTableName = activeDatabase + "." + tableName;
 
         switch (command) {
             case "INSERT":
             case "UPDATE":
             case "DELETE":
-                if (lockManager.acquireWriteLock(tableName)) {
+                if (lockManager.acquireWriteLock(fullTableName)) {
                     try {
-                        processWriteOperation(command, tableName, operation);
+                        processWriteOperation(command, fullTableName, operation);
                     } finally {
                         lockManager.releaseWriteLock();
                     }
@@ -132,11 +135,11 @@ public class TransactionManager {
                 break;
 
             case "SELECT":
-                if (lockManager.acquireReadLock(tableName)) {
+                if (lockManager.acquireReadLock(fullTableName)) {
                     try {
-                        processReadOperation(tableName, operation);
+                        processReadOperation(fullTableName);
                     } finally {
-                        lockManager.releaseReadLock(tableName);
+                        lockManager.releaseReadLock(fullTableName);
                     }
                 } else {
                     System.out.println("Error: Could not acquire read lock for table '" + tableName + "'.");
@@ -151,28 +154,21 @@ public class TransactionManager {
     /**
      * Processes read operations within a transaction.
      *
-     * @param tableName The table to retrieve data from.
-     * @param operation The SELECT statement.
+     * @param fullTableName The full table name including database prefix.
      */
-    private void processReadOperation(String tableName, String operation) {
-        // Extract database name if present in tableName
-        String dbName = "mydb";
-        String tableNameOnly = tableName;
-        if (tableName.contains(".")) {
-            String[] parts = tableName.split("\\.");
-            dbName = parts[0];
-            tableNameOnly = parts[1];
-        }
-
-        String fullTableName = dbName + "." + tableNameOnly;
+    private void processReadOperation(String fullTableName) {
         List<String> tableData = storageManager.loadTableData(fullTableName);
-
+        
         if (tableData.isEmpty()) {
-            System.out.println("Error: Table '" + tableNameOnly + "' not found.");
+            System.out.println("Error: Table not found.");
             return;
         }
 
-        System.out.println("\nData in '" + tableNameOnly + "':");
+        String tableName = fullTableName.contains(".") ? 
+                          fullTableName.substring(fullTableName.indexOf(".") + 1) : 
+                          fullTableName;
+        
+        System.out.println("\nData in '" + tableName + "':");
         for (int i = 1; i < tableData.size(); i++) { // Skip schema row
             System.out.println(tableData.get(i));
         }
@@ -181,25 +177,15 @@ public class TransactionManager {
     /**
      * Processes write operations (INSERT, UPDATE, DELETE).
      *
-     * @param command   The SQL command.
-     * @param tableName The target table.
-     * @param operation The SQL operation string.
+     * @param command      The SQL command.
+     * @param fullTableName The full table name including database prefix.
+     * @param operation    The SQL operation string.
      */
-    private void processWriteOperation(String command, String tableName, String operation) {
-        // Extract database name if present in tableName
-        String dbName = "mydb";
-        String tableNameOnly = tableName;
-        if (tableName.contains(".")) {
-            String[] parts = tableName.split("\\.");
-            dbName = parts[0];
-            tableNameOnly = parts[1];
-        }
-
-        String fullTableName = dbName + "." + tableNameOnly;
+    private void processWriteOperation(String command, String fullTableName, String operation) {
         List<String> tableData = storageManager.loadTableData(fullTableName);
-
+        
         if (tableData.isEmpty()) {
-            System.out.println("Error: Table '" + tableNameOnly + "' not found.");
+            System.out.println("Error: Table not found.");
             return;
         }
 
@@ -224,11 +210,11 @@ public class TransactionManager {
     /**
      * Updates table data dynamically.
      *
-     * @param tableName The table to update.
+     * @param fullTableName The full table name including database prefix.
      * @param operation The UPDATE statement.
      * @param tableData The current table data.
      */
-    private void updateTableData(String tableName, String operation, List<String> tableData) {
+    private void updateTableData(String fullTableName, String operation, List<String> tableData) {
         String[] parts = operation.split("WHERE");
         if (parts.length < 2) {
             System.out.println("Error: Missing WHERE condition in UPDATE statement.");
@@ -245,9 +231,9 @@ public class TransactionManager {
                 updated = true;
             }
         }
-
+        
         if (updated) {
-            storageManager.saveTable(tableName, tableData);
+            storageManager.saveTable(fullTableName, tableData);
             System.out.println("Committed: " + operation);
         } else {
             System.out.println("No records matched the condition for update.");
@@ -257,13 +243,13 @@ public class TransactionManager {
     /**
      * Deletes table data dynamically based on condition.
      *
-     * @param tableName The table to delete from.
+     * @param fullTableName The full table name including database prefix.
      * @param operation The DELETE statement.
      * @param tableData The current table data.
      */
-    private void deleteTableData(String tableName, String operation, List<String> tableData) {
+    private void deleteTableData(String fullTableName, String operation, List<String> tableData) {
         String condition = operation.contains("WHERE") ? operation.split("WHERE")[1].trim() : "";
-
+        
         int initialSize = tableData.size();
         if (condition.isEmpty()) {
             // Keep only the schema row
@@ -274,7 +260,7 @@ public class TransactionManager {
             // Remove rows that match the condition
             List<String> newData = new ArrayList<>();
             newData.add(tableData.get(0)); // Keep schema
-
+            
             for (int i = 1; i < tableData.size(); i++) {
                 if (!tableData.get(i).contains(condition)) {
                     newData.add(tableData.get(i));
@@ -282,8 +268,8 @@ public class TransactionManager {
             }
             tableData = newData;
         }
-
-        storageManager.saveTable(tableName, tableData);
+        
+        storageManager.saveTable(fullTableName, tableData);
         int rowsDeleted = initialSize - tableData.size();
         System.out.println("Committed: " + operation + " (" + rowsDeleted + " rows affected)");
     }
