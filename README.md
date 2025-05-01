@@ -61,5 +61,3 @@ The system is built with a modular architecture following SOLID principles:
 - **Concurrency**: Read/write lock mechanism to prevent data inconsistencies
 - **Security**: SHA-256 hashing for passwords and security answers
 - **Transactions**: Intermediate data structures to store changes before commit
-
-## By - Het Patel

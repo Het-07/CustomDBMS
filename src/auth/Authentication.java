@@ -2,6 +2,7 @@ package auth;
 
 import storage.AuditLogger;
 
+import java.io.Console;
 import java.io.IOException;
 import java.util.List;
 import java.util.Scanner;
@@ -28,8 +29,9 @@ public class Authentication {
         try {
             System.out.print("User ID: ");
             String userId = scanner.nextLine();
-            System.out.print("Password: ");
-            String password = scanner.nextLine();
+
+            // Read password securely without displaying it
+            String password = readPasswordSecurely("Password: ");
 
             // Load existing users from storage
             List<User> users = userStorage.loadUsers();
@@ -139,18 +141,19 @@ public class Authentication {
                 }
             }
 
-            // Prompt for user credentials
-            System.out.print("Password: ");
-            String password = pwdManager.hashPassword(scanner.nextLine()); // Hash the password
+            // Prompt for user credentials with masked password
+            String password = readPasswordSecurely("Password: ");
+            String hashedPassword = pwdManager.hashPassword(password); // Hash the password
 
             System.out.print("Security Question: ");
             String question = scanner.nextLine();
 
-            System.out.print("Security Answer: ");
-            String answer = pwdManager.hashPassword(scanner.nextLine()); // Hash the security answer
+            // Mask security answer as well for additional security
+            String answer = readPasswordSecurely("Security Answer: ");
+            String hashedAnswer = pwdManager.hashPassword(answer); // Hash the security answer
 
             // Create a new User object
-            User newUser = new User(userId, password, question, answer);
+            User newUser = new User(userId, hashedPassword, question, hashedAnswer);
 
             // Save the new user to 'users.json'
             userStorage.saveUsers(newUser);
@@ -189,8 +192,7 @@ public class Authentication {
 
             // Ask security question
             System.out.println("Security Question: " + target.getSecurityQuestion());
-            System.out.print("Enter your answer: ");
-            String answer = scanner.nextLine();
+            String answer = readPasswordSecurely("Enter your answer: ");
 
             // Validate answer (hashed)
             if (!pwdManager.verifyPassword(answer, target.getSecurityAnswer())) {
@@ -227,15 +229,16 @@ public class Authentication {
                 return;
             }
 
-            // Prompt for new password
-            System.out.print("Enter new password: ");
-            String newPassword = pwdManager.hashPassword(scanner.nextLine());
+            // Prompt for new password with masking
+            String newPassword = readPasswordSecurely("Enter new password: ");
+            String hashedPassword = pwdManager.hashPassword(newPassword);
 
             // Update password
             List<User> users = userStorage.loadUsers();
-            for (User u : users) {
+            for (int i = 0; i < users.size(); i++) {
+                User u = users.get(i);
                 if (u.getUserId().equals(userId)) {
-                    u = new User(userId, newPassword, u.getSecurityQuestion(), u.getSecurityAnswer());
+                    users.set(i, new User(userId, hashedPassword, u.getSecurityQuestion(), u.getSecurityAnswer()));
                     break;
                 }
             }
@@ -247,5 +250,43 @@ public class Authentication {
         } catch (IOException e) {
             System.out.println("Error during password reset: " + e.getMessage());
         }
+    }
+
+    /**
+     * Reads a password securely without displaying it in the console.
+     * Uses multiple approaches to ensure compatibility across different environments.
+     *
+     * @param prompt The prompt to display to the user
+     * @return The password as a string
+     */
+    private String readPasswordSecurely(String prompt) {
+        Console console = System.console();
+
+        // Method 1: Use Java's built-in Console.readPassword() if available
+        if (console != null) {
+            char[] passwordChars = console.readPassword(prompt);
+            String password = new String(passwordChars);
+            // Clear the password from memory for security
+            for (int i = 0; i < passwordChars.length; i++) {
+                passwordChars[i] = ' ';
+            }
+            return password;
+        }
+
+        // Method 2: Use jline library if available (not included by default)
+        try {
+            Class<?> readerClass = Class.forName("jline.console.ConsoleReader");
+            Object reader = readerClass.getDeclaredConstructor().newInstance();
+            java.lang.reflect.Method readLine = readerClass.getMethod("readLine", String.class, Character.class);
+            String password = (String) readLine.invoke(reader, prompt, Character.valueOf('*'));
+            return password;
+        } catch (Exception e) {
+            // JLine not available, continue to next method
+        }
+
+        // Method 3: Simple fallback - warn user and use regular input
+        System.out.println("[Security Notice: Password will be visible as you type in this environment]");
+        System.out.print(prompt);
+        return scanner.nextLine();
     }
 }

@@ -324,39 +324,125 @@ public class Query {
 
         System.out.println("\nData in '" + tableName + "':");
 
-        // Check if we can use the index for this query
-        if (condition.contains("=") && indexManager.isTableIndexed(fullTableName)) {
-            String[] parts = condition.split("=");
-            String column = parts[0].trim();
-            String value = parts[1].trim();
+        // If no condition, return all data
+        if (condition.isEmpty()) {
+            for (int i = 1; i < tableData.size(); i++) { // Skip schema row
+                System.out.println(tableData.get(i));
+            }
+            return;
+        }
 
-            // If querying by ID, use the index
-            if (column.equalsIgnoreCase("id")) {
-                try {
-                    int id = Integer.parseInt(value);
-                    String record = indexManager.getRecordById(fullTableName, id);
-                    if (record != null) {
-                        System.out.println(record);
-                    } else {
-                        System.out.println("No records found matching the condition.");
-                    }
-                    return;
-                } catch (NumberFormatException e) {
-                    // If not a valid integer, fall back to full scan
-                }
+        // Parse the condition
+        String operator = "";
+        if (condition.contains("=")) {
+            operator = "=";
+        } else if (condition.contains(">=")) {
+            operator = ">=";
+        } else if (condition.contains("<=")) {
+            operator = "<=";
+        } else if (condition.contains(">")) {
+            operator = ">";
+        } else if (condition.contains("<")) {
+            operator = "<";
+        } else {
+            System.out.println("Error: Unsupported condition operator. Use =, >, <, >=, or <=.");
+            return;
+        }
+
+        String[] parts = condition.split(operator.equals("=") ? "=" :
+                operator.equals(">=") ? ">=" :
+                        operator.equals("<=") ? "<=" :
+                                operator.equals(">") ? ">" : "<");
+
+        if (parts.length != 2) {
+            System.out.println("Error: Invalid condition format. Use 'column operator value'.");
+            return;
+        }
+
+        String columnName = parts[0].trim();
+        String value = parts[1].trim();
+
+        // Remove quotes from string values
+        if (value.startsWith("'") && value.endsWith("'")) {
+            value = value.substring(1, value.length() - 1);
+        }
+
+        // Get column index from schema
+        String schema = tableData.get(0);
+        String schemaContent = schema.substring(schema.indexOf(":") + 1).trim();
+        String[] columnDefs = schemaContent.split(",");
+
+        int columnIndex = -1;
+        String columnType = "";
+
+        for (int i = 0; i < columnDefs.length; i++) {
+            String[] colParts = columnDefs[i].trim().split("\\s+");
+            if (colParts.length >= 2 && colParts[0].equalsIgnoreCase(columnName)) {
+                columnIndex = i;
+                columnType = colParts[1].toUpperCase();
+                break;
             }
         }
 
-        // Full table scan if index can't be used
+        if (columnIndex == -1) {
+            System.out.println("Error: Column '" + columnName + "' not found in table.");
+            return;
+        }
+
+        // Process each row
         boolean found = false;
         for (int i = 1; i < tableData.size(); i++) { // Skip schema row
-            if (condition.isEmpty() || tableData.get(i).contains(condition)) {
-                System.out.println(tableData.get(i));
+            String row = tableData.get(i);
+            String[] rowValues = row.split(",");
+
+            if (rowValues.length <= columnIndex) {
+                continue; // Skip malformed rows
+            }
+
+            String cellValue = rowValues[columnIndex].trim();
+
+            // Remove quotes from string values in the data
+            if (cellValue.startsWith("'") && cellValue.endsWith("'")) {
+                cellValue = cellValue.substring(1, cellValue.length() - 1);
+            }
+
+            boolean matches = false;
+
+            // Compare based on column type
+            if (columnType.equals("INT") || columnType.equals("FLOAT")) {
+                try {
+                    double cellNum = Double.parseDouble(cellValue);
+                    double valueNum = Double.parseDouble(value);
+
+                    switch (operator) {
+                        case "=": matches = cellNum == valueNum; break;
+                        case ">": matches = cellNum > valueNum; break;
+                        case "<": matches = cellNum < valueNum; break;
+                        case ">=": matches = cellNum >= valueNum; break;
+                        case "<=": matches = cellNum <= valueNum; break;
+                    }
+                } catch (NumberFormatException e) {
+                    // Skip rows with non-numeric values in numeric columns
+                    continue;
+                }
+            } else { // STRING or other types
+                // For string types, only equality comparison makes sense
+                if (operator.equals("=")) {
+                    // Case-insensitive comparison for strings
+                    matches = cellValue.equalsIgnoreCase(value);
+                } else {
+                    System.out.println("Warning: Non-equality operators not supported for string columns. Using equality check.");
+                    matches = cellValue.equalsIgnoreCase(value);
+                }
+            }
+
+            if (matches) {
+                System.out.println(row);
                 found = true;
             }
         }
 
-        if (!found && !condition.isEmpty()) {
+        if (!found) {
             System.out.println("No records found matching the condition.");
         }
     }

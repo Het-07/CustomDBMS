@@ -1,0 +1,100 @@
+# Custom DBMS Demo Queries ----------
+# This file contains a sequence of queries to demonstrate the functionality of the custom DBMS.
+# Follow the sequence for a complete demonstration of the system's capabilities.
+
+# 1. DATABASE MANAGEMENT
+# First, check if any databases exist
+SHOW DATABASES;
+
+# Create a new students database
+CREATE DATABASE students;
+
+# Verify the database was created
+SHOW DATABASES;
+
+# Select the students database for use
+USE students;
+
+# 2. TABLE CREATION
+# Create a Profile table with student information
+CREATE TABLE Profile (bannerID STRING, firstName STRING, lastName STRING, email STRING, gpa FLOAT);
+
+# 3. SCHEMA INSPECTION
+# View the structure of the Profile table
+DESCRIBE Profile;
+
+# 4. DATA INSERTION
+# Insert student profile records
+INSERT INTO Profile VALUES ('B00123456', 'John', 'Smith', 'B00123456@dal.ca', 3.8);
+INSERT INTO Profile VALUES ('B00234567', 'Maria', 'Garcia', 'B00234567@dal.ca', 3.9);
+INSERT INTO Profile VALUES ('B00345678', 'Ahmed', 'Khan', 'B00345678@dal.ca', 4.0);
+INSERT INTO Profile VALUES ('B00456789', 'Emma', 'Wilson', 'B00456789@dal.ca', 3.7);
+INSERT INTO Profile VALUES ('B00567890', 'Michael', 'Chen', 'B00567890@dal.ca', 3.5);
+INSERT INTO Profile VALUES ('B00678901', 'Sophia', 'Lee', 'B00678901@dal.ca', 3.2);
+INSERT INTO Profile VALUES ('B00789012', 'Daniel', 'Rodriguez', 'B00789012@dal.ca', 3.6);
+INSERT INTO Profile VALUES ('B00890123', 'Olivia', 'Taylor', 'B00890123@dal.ca', 3.9);
+INSERT INTO Profile VALUES ('B00901234', 'William', 'Brown', 'B00901234@dal.ca', 3.4);
+INSERT INTO Profile VALUES ('B00012345', 'Ava', 'Johnson', 'B00012345@dal.ca', 3.8);
+
+# 5. DATA RETRIEVAL
+# Retrieve all student profiles
+SELECT * FROM Profile;
+
+# 6. DATA RETRIEVAL - FILTERED QUERIES
+# Find a specific student by bannerID
+SELECT * FROM Profile WHERE bannerID = 'B00123456';
+
+# Find all students with GPA above 3.8
+SELECT * FROM Profile WHERE gpa >= 3.8;
+
+# Find a student by last name
+SELECT * FROM Profile WHERE lastName = 'Garcia';
+
+# Find students with GPA below 3.5
+SELECT * FROM Profile WHERE gpa <= 3.5;
+
+# 7. TRANSACTION MANAGEMENT - SUCCESSFUL TRANSACTION
+# Start a transaction
+BEGIN TRANSACTION;
+
+# Add a new student within the transaction
+INSERT INTO Profile VALUES ('B00111222', 'James', 'Martinez', 'B00111222@dal.ca', 3.7);
+
+# Verify data is not yet visible outside the transaction
+SELECT * FROM Profile;
+
+# Commit the transaction to make changes permanent
+COMMIT;
+
+# Verify data is now visible
+SELECT * FROM Profile;
+
+# 8. TRANSACTION MANAGEMENT - ROLLBACK DEMONSTRATION
+# Start another transaction
+BEGIN TRANSACTION;
+
+# Add a temporary student record
+INSERT INTO Profile VALUES ('B00222333', 'Ethan', 'Johnson', 'B00222333@dal.ca', 3.3);
+
+# Verify the record is not yet visible outside the transaction
+SELECT * FROM Profile;
+
+# Rollback the transaction to discard changes
+ROLLBACK;
+
+# Verify the record was not added
+SELECT * FROM Profile;
+
+# 9. ERROR HANDLING DEMONSTRATION
+# Try to create a table that already exists
+CREATE TABLE Profile (id INT, name STRING);
+
+# Try to insert data with missing values
+INSERT INTO Profile VALUES ('B00333444', 'Robert');
+
+# Try to query a non-existent table
+SELECT * FROM Courses;
+
+# 10. EXIT THE APPLICATION
+# When finished, exit the application
+EXIT

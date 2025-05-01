@@ -159,7 +159,12 @@ public class StorageManager {
         return database;
     }
 
-    // Add method to load table data
+    /**
+     * Loads table data from a JSON file.
+     *
+     * @param tableName The name of the table to load.
+     * @return A list of records from the table.
+     */
     public List<String> loadTableData(String tableName) {
         List<String> tableData = new ArrayList<>();
         File file = new File("data/" + tableName + ".json");
@@ -180,9 +185,12 @@ public class StorageManager {
                 json = json.substring(1, json.length() - 1).trim();
 
                 if (!json.isEmpty()) {
-                    String[] rows = json.split("\",\\s*\"|\",\"");
+                    // Split by commas that are followed by a quote, but not inside quotes
+                    String[] rows = json.split("\",\\s*\"");
                     for (String row : rows) {
-                        tableData.add(row.replace("\"", "").trim());
+                        // Remove surrounding quotes and unescape internal quotes
+                        row = row.replaceAll("^\"", "").replaceAll("\"$", "").replace("\\\"", "\"");
+                        tableData.add(row);
                     }
                 }
             }
@@ -191,5 +199,29 @@ public class StorageManager {
         }
 
         return tableData;
+    }
+
+    /**
+     * Prints the raw content of a table file for debugging purposes.
+     *
+     * @param tableName The name of the table to debug.
+     */
+    public void debugTableFile(String tableName) {
+        File file = new File("data/" + tableName + ".json");
+
+        if (!file.exists()) {
+            System.out.println("Debug: Table file does not exist: " + file.getAbsolutePath());
+            return;
+        }
+
+        System.out.println("Debug: Raw content of " + file.getAbsolutePath() + ":");
+        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                System.out.println("DEBUG: " + line);
+            }
+        } catch (IOException e) {
+            System.err.println("Error reading file for debug: " + e.getMessage());
+        }
     }
 }
