@@ -120,9 +120,7 @@ public class TransactionManager {
         String fullTableName = activeDatabase + "." + tableName;
 
         switch (command) {
-            case "INSERT":
-            case "UPDATE":
-            case "DELETE":
+            case "INSERT", "UPDATE", "DELETE" -> {
                 if (lockManager.acquireWriteLock(fullTableName)) {
                     try {
                         processWriteOperation(command, fullTableName, operation);
@@ -132,9 +130,8 @@ public class TransactionManager {
                 } else {
                     System.out.println("Error: Could not acquire write lock for table '" + tableName + "'.");
                 }
-                break;
-
-            case "SELECT":
+            }
+            case "SELECT" -> {
                 if (lockManager.acquireReadLock(fullTableName)) {
                     try {
                         processReadOperation(fullTableName);
@@ -144,10 +141,8 @@ public class TransactionManager {
                 } else {
                     System.out.println("Error: Could not acquire read lock for table '" + tableName + "'.");
                 }
-                break;
-
-            default:
-                System.out.println("Unsupported operation in transaction: " + operation);
+            }
+            default -> System.out.println("Unsupported operation in transaction: " + operation);
         }
     }
 
@@ -190,20 +185,21 @@ public class TransactionManager {
         }
 
         switch (command) {
-            case "INSERT":
-                String values = operation.substring(operation.indexOf("VALUES") + 6).trim().replaceAll("[()]", "");
-                tableData.add(values);
-                storageManager.saveTable(fullTableName, tableData);
-                System.out.println("Committed: " + operation);
-                break;
+            case "INSERT" -> {
+                int valuesIndex = operation.toUpperCase().indexOf("VALUES");
+                if (valuesIndex > 0) {
+                    String values = operation.substring(valuesIndex + 6).trim().replaceAll("[()]", "");
+                    tableData.add(values);
+                    storageManager.saveTable(fullTableName, tableData);
+                    System.out.println("Committed: " + operation);
+                } else {
+                    System.out.println("Error: Invalid INSERT syntax in transaction.");
+                }
+            }
 
-            case "UPDATE":
-                updateTableData(fullTableName, operation, tableData);
-                break;
+            case "UPDATE" -> updateTableData(fullTableName, operation, tableData);
 
-            case "DELETE":
-                deleteTableData(fullTableName, operation, tableData);
-                break;
+            case "DELETE" -> deleteTableData(fullTableName, operation, tableData);
         }
     }
 

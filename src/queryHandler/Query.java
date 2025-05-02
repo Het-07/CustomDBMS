@@ -1,10 +1,9 @@
 package queryHandler;
 
+import java.util.*;
+import storage.IndexManager;
 import storage.StorageManager;
 import transactionHandling.TransactionManager;
-import storage.IndexManager;
-
-import java.util.*;
 
 /**
  * Handles SQL-like queries for the lightweight DBMS.
@@ -45,23 +44,23 @@ public class Query {
         String command = tokens[0].toUpperCase();
 
         switch (command) {
-            case "SHOW":
+            case "SHOW" -> {
                 if (tokens.length > 1 && tokens[1].equalsIgnoreCase("DATABASES")) {
                     showDatabases();
                 } else {
                     System.out.println("Error: Invalid SHOW command. Use 'SHOW DATABASES'.");
                 }
-                break;
+            }
 
-            case "USE":
+            case "USE" -> {
                 if (tokens.length > 1) {
                     useDatabase(tokens[1]);
                 } else {
                     System.out.println("Error: Database name required. Use 'USE database_name'.");
                 }
-                break;
+            }
 
-            case "CREATE":
+            case "CREATE" -> {
                 if (tokens.length > 1) {
                     if (tokens[1].equalsIgnoreCase("DATABASE") && tokens.length > 2) {
                         createDatabase(tokens[2]);
@@ -81,17 +80,17 @@ public class Query {
                 } else {
                     System.out.println("Error: Invalid CREATE command. Use 'CREATE DATABASE db_name' or 'CREATE TABLE table_name (columns)'.");
                 }
-                break;
+            }
 
-            case "DESCRIBE":
+            case "DESCRIBE" -> {
                 if (tokens.length > 1) {
                     describeTable(tokens[1]);
                 } else {
                     System.out.println("Error: Table name required. Use 'DESCRIBE table_name'.");
                 }
-                break;
+            }
 
-            case "INSERT":
+            case "INSERT" -> {
                 if (tokens.length > 1 && tokens[1].equalsIgnoreCase("INTO") && tokens.length > 2) {
                     String tableInfo = tokens[2];
                     int valuesIndex = tableInfo.toUpperCase().indexOf("VALUES");
@@ -107,16 +106,15 @@ public class Query {
                 } else {
                     System.out.println("Error: Invalid INSERT command. Use 'INSERT INTO table_name VALUES (value1, value2, ...)'.");
                 }
-                break;
+            }
 
-            case "SELECT":
+            case "SELECT" -> {
                 if (tokens.length > 1) {
                     String selectQuery = query.substring(7).trim(); // Remove "SELECT "
                     String fromKeyword = "FROM";
                     int fromIndex = selectQuery.toUpperCase().indexOf(fromKeyword);
                     
                     if (fromIndex > 0) {
-                        String columns = selectQuery.substring(0, fromIndex).trim();
                         String remaining = selectQuery.substring(fromIndex + fromKeyword.length()).trim();
                         
                         String tableName;
@@ -137,26 +135,21 @@ public class Query {
                 } else {
                     System.out.println("Error: Invalid SELECT command. Use 'SELECT columns FROM table_name [WHERE condition]'.");
                 }
-                break;
+            }
 
-            case "BEGIN":
+            case "BEGIN" -> {
                 if (tokens.length > 1 && tokens[1].equalsIgnoreCase("TRANSACTION")) {
                     beginTransaction();
                 } else {
                     System.out.println("Error: Invalid BEGIN command. Use 'BEGIN TRANSACTION'.");
                 }
-                break;
+            }
 
-            case "COMMIT":
-                commitTransaction();
-                break;
+            case "COMMIT" -> commitTransaction();
 
-            case "ROLLBACK":
-                rollbackTransaction();
-                break;
+            case "ROLLBACK" -> rollbackTransaction();
 
-            default:
-                System.out.println("Error: Unsupported command. Supported commands: SHOW, USE, CREATE, DESCRIBE, INSERT, SELECT, BEGIN, COMMIT, ROLLBACK.");
+            default -> System.out.println("Error: Unsupported command. Supported commands: SHOW, USE, CREATE, DESCRIBE, INSERT, SELECT, BEGIN, COMMIT, ROLLBACK.");
         }
     }
 
@@ -393,11 +386,17 @@ public class Query {
             String row = tableData.get(i);
             String[] values = row.split(",");
             
-            if (values.length <= columnIndex) {
+            if (columnIndex >= values.length) {
                 continue; // Skip rows with insufficient columns
             }
             
-            String cellValue = values[columnIndex].trim().replace("'", "");
+            // Clean the cell value - remove quotes and trim
+            String cellValue = values[columnIndex].trim();
+            cellValue = cellValue.replaceAll("^'|'$", ""); // Remove surrounding quotes
+            
+            // Clean the comparison value - remove quotes
+            String cleanValue = value.trim();
+            cleanValue = cleanValue.replaceAll("^'|'$", ""); // Remove surrounding quotes
             
             boolean matches = false;
             
@@ -405,31 +404,29 @@ public class Query {
             if (columnType.equals("INT") || columnType.equals("FLOAT")) {
                 try {
                     double cellNum = Double.parseDouble(cellValue);
-                    double valueNum = Double.parseDouble(value.replace("'", ""));
+                    double valueNum = Double.parseDouble(cleanValue);
                     
                     switch (operator) {
-                        case "=": matches = cellNum == valueNum; break;
-                        case ">": matches = cellNum > valueNum; break;
-                        case "<": matches = cellNum < valueNum; break;
-                        case ">=": matches = cellNum >= valueNum; break;
-                        case "<=": matches = cellNum <= valueNum; break;
-                        case "!=": matches = cellNum != valueNum; break;
+                        case "=" -> matches = cellNum == valueNum;
+                        case ">" -> matches = cellNum > valueNum;
+                        case "<" -> matches = cellNum < valueNum;
+                        case ">=" -> matches = cellNum >= valueNum;
+                        case "<=" -> matches = cellNum <= valueNum;
+                        case "!=" -> matches = cellNum != valueNum;
                     }
                 } catch (NumberFormatException e) {
                     // Skip rows with invalid number format
                     continue;
                 }
             } else {
-                // String comparison - remove quotes if present
-                String valueStr = value.replace("'", "");
-                
+                // String comparison
                 switch (operator) {
-                    case "=": matches = cellValue.equals(valueStr); break;
-                    case "!=": matches = !cellValue.equals(valueStr); break;
-                    case ">": matches = cellValue.compareTo(valueStr) > 0; break;
-                    case "<": matches = cellValue.compareTo(valueStr) < 0; break;
-                    case ">=": matches = cellValue.compareTo(valueStr) >= 0; break;
-                    case "<=": matches = cellValue.compareTo(valueStr) <= 0; break;
+                    case "=" -> matches = cellValue.equals(cleanValue);
+                    case "!=" -> matches = !cellValue.equals(cleanValue);
+                    case ">" -> matches = cellValue.compareTo(cleanValue) > 0;
+                    case "<" -> matches = cellValue.compareTo(cleanValue) < 0;
+                    case ">=" -> matches = cellValue.compareTo(cleanValue) >= 0;
+                    case "<=" -> matches = cellValue.compareTo(cleanValue) <= 0;
                 }
             }
             
