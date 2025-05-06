@@ -35,9 +35,6 @@ INSERT INTO Profile VALUES ('B00567890', 'Michael', 'Chen', 'B00567890@dal.ca', 
 # Retrieve all student records from the Profile table
 SELECT * FROM Profile
 
-# Retrieve a specific student by their banner ID
-SELECT * FROM Profile WHERE bannerID = 'B00123456'
-
 # Retrieve all students with GPA of 3.8 or higher
 SELECT * FROM Profile WHERE gpa >= 3.8
 
@@ -70,9 +67,6 @@ SELECT * FROM Profile
 
 # Error demonstration: Try to create a table that already exists
 CREATE TABLE Profile (id INT, name STRING)
-
-# Error demonstration: Try to insert data with missing values
-INSERT INTO Profile VALUES ('B00333444')
 
 # Error demonstration: Try to query a non-existent table
 SELECT * FROM Courses
